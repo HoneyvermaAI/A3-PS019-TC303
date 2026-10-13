@@ -151,3 +151,36 @@ def test_api_frontend_serving(client: TestClient) -> None:
     assert res.status_code == 200
     assert "text/html" in res.headers["content-type"]
     assert "Personal-Data Discovery & Evidence Inventory" in res.text
+
+
+def test_api_inventory_empty_search(client: TestClient) -> None:
+    res = client.get("/api/inventory?search=non_existent_field_xyz_123")
+    assert res.status_code == 200
+    data = res.json()
+    assert data["total_count"] == 0
+    assert data["records"] == []
+
+
+def test_api_gaps_empty_filter(client: TestClient) -> None:
+    res = client.get("/api/gaps?status_type=NonExistentStatus")
+    assert res.status_code == 200
+    data = res.json()
+    assert data["total_gaps"] == 0
+    assert data["gaps"] == []
+
+
+def test_api_repeated_scan_idempotency(client: TestClient) -> None:
+    # Run scan twice
+    res1 = client.post("/api/scan")
+    res2 = client.post("/api/scan")
+    assert res1.status_code == 200
+    assert res2.status_code == 200
+    data1 = res1.json()
+    data2 = res2.json()
+    assert data1["scanned_fields_count"] == data2["scanned_fields_count"] == 84
+    assert data1["detected_candidates_count"] == data2["detected_candidates_count"] == 50
+
+    # Verify inventory is not duplicated
+    inv_res = client.get("/api/inventory")
+    assert inv_res.json()["total_count"] == 50
+

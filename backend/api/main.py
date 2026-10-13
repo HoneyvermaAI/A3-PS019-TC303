@@ -209,6 +209,31 @@ def trigger_scan() -> ScanTriggerResponse:
         csv_names = [cr.source_name for cr in report.csv_results]
         sql_names = [f"{sr.db_name}:{tbl}" for sr in report.sql_results for tbl in sr.tables.keys()]
 
+        # Automatically synchronize metadata inventory and evaluation reports
+        try:
+            mapper = MetadataMapper(METADATA_PATH)
+            inv_builder = EvidenceInventory(mapper)
+            inventory_records = inv_builder.build(report.all_field_results)
+            gap_reporter = GapReportGenerator(inventory_records)
+            gap_reporter.build_summary()
+            gap_reporter.export_inventory_csv()
+            gap_reporter.export_gaps_csv()
+            gap_reporter.export_inventory_json()
+
+            evaluator = Evaluator()
+            gt_records = evaluator.load_ground_truth(DEFAULT_GROUND_TRUTH_PATH)
+            eval_summary = evaluator.evaluate(report.all_field_results, gt_records)
+            errors = evaluator.extract_error_records(report.all_field_results, gt_records)
+
+            eval_reporter = EvaluationReporter()
+            eval_reporter.export_summary_json(eval_summary)
+            eval_reporter.export_per_class_csv(eval_summary.per_class_metrics)
+            eval_reporter.export_confusion_matrix_csv(eval_summary.confusion_matrix)
+            eval_reporter.export_errors_csv(errors)
+        except Exception as sync_err:
+            # Non-fatal during raw scan if metadata/ground-truth are missing or custom
+            pass
+
         return ScanTriggerResponse(
             status="completed",
             message="Scanner executed successfully across all synthetic data sources.",

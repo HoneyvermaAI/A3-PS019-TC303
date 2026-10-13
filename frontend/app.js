@@ -91,15 +91,26 @@ function showToast(message, type = 'info') {
   }, 4000);
 }
 
+function escapeHtml(str) {
+  if (str === null || str === undefined) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
 function getClassBadge(cls) {
   if (!cls) return `<span class="badge" style="background:#20293a;color:#94a3b8;">Non-PII</span>`;
-  const lower = cls.toLowerCase();
-  if (lower.includes('identity')) return `<span class="badge badge-class-identity">Identity</span>`;
-  if (lower.includes('contact')) return `<span class="badge badge-class-contact">Contact</span>`;
-  if (lower.includes('location')) return `<span class="badge badge-class-location">Location</span>`;
-  if (lower.includes('financial')) return `<span class="badge badge-class-financial">Financial</span>`;
-  if (lower.includes('sensitive') || lower.includes('health')) return `<span class="badge badge-class-sensitive">Sensitive/Health</span>`;
-  return `<span class="badge">${cls}</span>`;
+  const lower = String(cls).toLowerCase();
+  const safeCls = escapeHtml(cls);
+  if (lower.includes('identity')) return `<span class="badge badge-class-identity">${safeCls}</span>`;
+  if (lower.includes('contact')) return `<span class="badge badge-class-contact">${safeCls}</span>`;
+  if (lower.includes('location')) return `<span class="badge badge-class-location">${safeCls}</span>`;
+  if (lower.includes('financial')) return `<span class="badge badge-class-financial">${safeCls}</span>`;
+  if (lower.includes('sensitive') || lower.includes('health')) return `<span class="badge badge-class-sensitive">${safeCls}</span>`;
+  return `<span class="badge">${safeCls}</span>`;
 }
 
 function getStatusBadge(status) {
@@ -182,8 +193,20 @@ async function fetchSummary() {
       elements.ovRecall.textContent = r !== null ? `${(r * 100).toFixed(1)}%` : 'N/A';
       elements.ovF1.textContent = f !== null ? f.toFixed(3) : 'N/A';
     }
+
+    // Update status dot
+    if (elements.statusDot) {
+      elements.statusDot.style.backgroundColor = 'var(--accent-emerald)';
+      elements.statusDot.style.boxShadow = '0 0 8px var(--accent-emerald)';
+    }
+    if (elements.statusText) elements.statusText.textContent = 'API Connected';
   } catch (err) {
     console.error('Error loading summary:', err);
+    if (elements.statusDot) {
+      elements.statusDot.style.backgroundColor = 'var(--accent-rose)';
+      elements.statusDot.style.boxShadow = '0 0 8px var(--accent-rose)';
+    }
+    if (elements.statusText) elements.statusText.textContent = 'API Disconnected';
   }
 }
 
@@ -231,28 +254,34 @@ function renderInventory() {
 
   let rows = '';
   filtered.forEach((r, idx) => {
+    const safeReason = escapeHtml(r.detection_reason);
+    const safeSourceName = escapeHtml(r.source_name);
+    const safeFieldName = escapeHtml(r.field_name);
+    const safePurpose = escapeHtml(r.purpose);
+    const safeRetention = escapeHtml(r.retention_period);
+
     const revBadge = r.review_required
-      ? `<span class="badge badge-review" title="${r.detection_reason}">Review Required</span>`
+      ? `<span class="badge badge-review" title="${safeReason}">Review Required</span>`
       : `<span style="font-size:0.75rem; color:var(--accent-emerald);">Auto-Triage</span>`;
 
     const confVal = r.confidence ? r.confidence.toFixed(2) : '0.00';
-    const confLevel = r.confidence_level || 'Low';
+    const confLevel = escapeHtml(r.confidence_level || 'Low');
 
     rows += `
       <tr>
-        <td class="font-mono" style="font-size:0.78rem; color:var(--text-secondary);">${r.source_name}</td>
-        <td class="font-mono" style="font-weight:600; color:var(--accent-cyan);">${r.field_name}</td>
+        <td class="font-mono" style="font-size:0.78rem; color:var(--text-secondary);">${safeSourceName}</td>
+        <td class="font-mono" style="font-weight:600; color:var(--accent-cyan);">${safeFieldName}</td>
         <td>${getClassBadge(r.detected_class)}</td>
         <td>
           <span class="font-mono" style="font-weight:600;">${confVal}</span>
           <span style="font-size:0.72rem; color:var(--text-muted);">(${confLevel})</span>
         </td>
         <td>${revBadge}</td>
-        <td style="max-width:200px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${r.purpose || 'None declared'}">
-          ${r.purpose ? r.purpose : '<span style="color:var(--text-muted); font-style:italic;">Missing</span>'}
+        <td style="max-width:200px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${safePurpose || 'None declared'}">
+          ${safePurpose ? safePurpose : '<span style="color:var(--text-muted); font-style:italic;">Missing</span>'}
         </td>
-        <td style="max-width:140px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${r.retention_period || 'None declared'}">
-          ${r.retention_period ? r.retention_period : '<span style="color:var(--text-muted); font-style:italic;">Missing</span>'}
+        <td style="max-width:140px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${safeRetention || 'None declared'}">
+          ${safeRetention ? safeRetention : '<span style="color:var(--text-muted); font-style:italic;">Missing</span>'}
         </td>
         <td>${getStatusBadge(r.overall_status)}</td>
         <td>
@@ -307,20 +336,23 @@ function renderGaps() {
 
   let rows = '';
   filtered.forEach((g) => {
+    const safeSourceName = escapeHtml(g.source_name);
+    const safeFieldName = escapeHtml(g.field_name);
+    const safeNote = escapeHtml(g.evidence_note);
     const missingStr = g.missing_items && g.missing_items.length > 0
-      ? g.missing_items.join(', ')
+      ? escapeHtml(g.missing_items.join(', '))
       : 'purpose, retention';
 
     rows += `
       <tr>
-        <td class="font-mono" style="font-size:0.78rem; color:var(--text-secondary);">${g.source_name}</td>
-        <td class="font-mono" style="font-weight:600; color:var(--accent-cyan);">${g.field_name}</td>
+        <td class="font-mono" style="font-size:0.78rem; color:var(--text-secondary);">${safeSourceName}</td>
+        <td class="font-mono" style="font-weight:600; color:var(--accent-cyan);">${safeFieldName}</td>
         <td>${getClassBadge(g.detected_class)}</td>
         <td>${getStatusBadge(g.overall_status)}</td>
         <td class="font-mono" style="font-size:0.78rem; color:var(--accent-amber);">${missingStr}</td>
-        <td style="font-size:0.8rem; color:var(--text-secondary); max-width:280px;">${g.evidence_note}</td>
+        <td style="font-size:0.8rem; color:var(--text-secondary); max-width:280px;">${safeNote}</td>
         <td>
-          <button class="btn btn-secondary" style="padding:0.25rem 0.55rem; font-size:0.75rem;" onclick="openGapDetails('${g.source_name}', '${g.field_name}')">Inspect</button>
+          <button class="btn btn-secondary" style="padding:0.25rem 0.55rem; font-size:0.75rem;" onclick="openGapDetails('${encodeURIComponent(g.source_name)}', '${encodeURIComponent(g.field_name)}')">Inspect</button>
         </td>
       </tr>
     `;
@@ -482,27 +514,41 @@ window.openFieldDetails = function(idx) {
   const item = state.inventory[idx];
   if (!item) return;
 
+  const safeSourceName = escapeHtml(item.source_name);
+  const safeFieldName = escapeHtml(item.field_name);
+  const safeSourceType = escapeHtml(item.source_type);
+  const safePurpose = escapeHtml(item.purpose);
+  const safeRetention = escapeHtml(item.retention_period);
+  const safeOwner = escapeHtml(item.metadata_owner);
+  const safeReason = escapeHtml(item.detection_reason);
+  const safeNote = escapeHtml(item.evidence_note);
+  const missingStr = item.missing_items && item.missing_items.length > 0
+    ? escapeHtml(item.missing_items.join(', '))
+    : 'None (Complete)';
+
   elements.modalFieldTitle.textContent = `${item.source_name} → ${item.field_name}`;
   elements.modalDetailsBody.innerHTML = `
-    <div class="detail-row"><div class="detail-label">Source Type</div><div class="detail-value font-mono">${item.source_type}</div></div>
-    <div class="detail-row"><div class="detail-label">Source File / DB</div><div class="detail-value font-mono">${item.source_name}</div></div>
-    <div class="detail-row"><div class="detail-label">Field Name</div><div class="detail-value font-mono" style="color:var(--accent-cyan); font-weight:600;">${item.field_name}</div></div>
+    <div class="detail-row"><div class="detail-label">Source Type</div><div class="detail-value font-mono">${safeSourceType}</div></div>
+    <div class="detail-row"><div class="detail-label">Source File / DB</div><div class="detail-value font-mono">${safeSourceName}</div></div>
+    <div class="detail-row"><div class="detail-label">Field Name</div><div class="detail-value font-mono" style="color:var(--accent-cyan); font-weight:600;">${safeFieldName}</div></div>
     <div class="detail-row"><div class="detail-label">Detected Class</div><div class="detail-value">${getClassBadge(item.detected_class)}</div></div>
-    <div class="detail-row"><div class="detail-label">Confidence Score</div><div class="detail-value font-mono">${item.confidence ? item.confidence.toFixed(4) : '0.00'} (${item.confidence_level})</div></div>
+    <div class="detail-row"><div class="detail-label">Confidence Score</div><div class="detail-value font-mono">${item.confidence ? item.confidence.toFixed(4) : '0.00'} (${escapeHtml(item.confidence_level)})</div></div>
     <div class="detail-row"><div class="detail-label">Triage Flag</div><div class="detail-value">${item.review_required ? '<span class="badge badge-review">Human Review Required</span>' : '<span style="color:var(--accent-emerald);">Automated High-Confidence</span>'}</div></div>
-    <div class="detail-row"><div class="detail-label">Declared Purpose</div><div class="detail-value">${item.purpose || '<em style="color:var(--text-muted);">Not declared (Evidence Gap)</em>'}</div></div>
-    <div class="detail-row"><div class="detail-label">Retention Period</div><div class="detail-value">${item.retention_period || '<em style="color:var(--text-muted);">Not declared (Evidence Gap)</em>'}</div></div>
-    <div class="detail-row"><div class="detail-label">Metadata Owner</div><div class="detail-value">${item.metadata_owner || '<em style="color:var(--text-muted);">Unassigned</em>'}</div></div>
+    <div class="detail-row"><div class="detail-label">Declared Purpose</div><div class="detail-value">${safePurpose || '<em style="color:var(--text-muted);">Not declared (Evidence Gap)</em>'}</div></div>
+    <div class="detail-row"><div class="detail-label">Retention Period</div><div class="detail-value">${safeRetention || '<em style="color:var(--text-muted);">Not declared (Evidence Gap)</em>'}</div></div>
+    <div class="detail-row"><div class="detail-label">Metadata Owner</div><div class="detail-value">${safeOwner || '<em style="color:var(--text-muted);">Unassigned</em>'}</div></div>
     <div class="detail-row"><div class="detail-label">Metadata Status</div><div class="detail-value">${getStatusBadge(item.overall_status)}</div></div>
-    <div class="detail-row"><div class="detail-label">Missing Items</div><div class="detail-value font-mono" style="color:var(--accent-amber);">${item.missing_items && item.missing_items.length > 0 ? item.missing_items.join(', ') : 'None (Complete)'}</div></div>
-    <div class="detail-row"><div class="detail-label">Detection Reason</div><div class="detail-value" style="font-size:0.8rem; color:var(--text-secondary); background:var(--bg-secondary); padding:0.5rem; border-radius:4px;">${item.detection_reason || 'N/A'}</div></div>
-    <div class="detail-row"><div class="detail-label">Governance Note</div><div class="detail-value" style="font-size:0.8rem; color:var(--text-secondary); background:var(--bg-secondary); padding:0.5rem; border-radius:4px;">${item.evidence_note || 'N/A'}</div></div>
+    <div class="detail-row"><div class="detail-label">Missing Items</div><div class="detail-value font-mono" style="color:var(--accent-amber);">${missingStr}</div></div>
+    <div class="detail-row"><div class="detail-label">Detection Reason</div><div class="detail-value" style="font-size:0.8rem; color:var(--text-secondary); background:var(--bg-secondary); padding:0.5rem; border-radius:4px;">${safeReason || 'N/A'}</div></div>
+    <div class="detail-row"><div class="detail-label">Governance Note</div><div class="detail-value" style="font-size:0.8rem; color:var(--text-secondary); background:var(--bg-secondary); padding:0.5rem; border-radius:4px;">${safeNote || 'N/A'}</div></div>
   `;
   elements.detailModal.classList.add('active');
 };
 
 window.openGapDetails = function(sourceName, fieldName) {
-  const idx = state.inventory.findIndex(r => r.source_name === sourceName && r.field_name === fieldName);
+  const decSource = decodeURIComponent(sourceName);
+  const decField = decodeURIComponent(fieldName);
+  const idx = state.inventory.findIndex(r => r.source_name === decSource && r.field_name === decField);
   if (idx !== -1) {
     window.openFieldDetails(idx);
   }
