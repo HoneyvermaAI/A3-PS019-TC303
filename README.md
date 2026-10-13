@@ -466,10 +466,48 @@ $env:PYTHONIOENCODING="utf-8"
 
 ---
 
+## Web Dashboard & REST API (Phase 6)
+
+Phase 6 provides a responsive cybersecurity dashboard connected directly to the FastAPI REST API layer.
+
+### Visual Aesthetic & Tech Stack
+- **Theme**: Dark navy background (`#0a0f1d`, `#111a2e`) with cyan and teal accents (`#00d2ff`, `#10b981`).
+- **Tech Stack**: FastAPI backend, vanilla HTML5 / CSS3 / JavaScript frontend (no heavy build steps or npm requirements).
+- **Static Delivery**: Served directly by FastAPI at `http://127.0.0.1:8000/`.
+
+### Starting the Application
+
+Launch the FastAPI application with Uvicorn:
+```powershell
+$env:PYTHONIOENCODING="utf-8"
+.venv\Scripts\python -m uvicorn backend.api.main:app --reload --host 127.0.0.1 --port 8000
+```
+
+Open your browser to:
+[http://127.0.0.1:8000](http://127.0.0.1:8000)
+
+### REST API Endpoints
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/api/health` | Health status and technical readiness check. |
+| `GET` | `/api/summary` | Live summary counts (scanned fields, candidates, complete, gaps). |
+| `POST` | `/api/scan` | Runs live CSV and SQLite scanner without mock data. |
+| `POST` | `/api/analyze` | Executes end-to-end mapping, gap analysis, and evaluation pipeline. |
+| `GET` | `/api/inventory` | Searchable and filterable personal-data candidate inventory. |
+| `GET` | `/api/gaps` | Filterable list of fields with missing purpose/retention metadata. |
+| `GET` | `/api/evaluation` | Real ground-truth precision, recall, F1, and confusion matrix. |
+| `GET` | `/api/rules` | Read-only configuration from `backend/config/rules.json`. |
+| `GET` | `/api/reports/{report_name}` | Whitelisted, path-traversal-protected report downloads. |
+| `GET` | `/` | Serves dashboard web application. |
+
+---
+
 ## Disclaimer
 
 > This prototype is developed for a **hackathon demonstration** using **entirely synthetic data**.  
 > It provides a **technical evidence inventory** to assist human privacy reviewers.  
 > It does **not** constitute legal advice, determine regulatory compliance, or replace a formal Data Protection Impact Assessment (DPIA).
+
 
 
