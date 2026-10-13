@@ -465,7 +465,7 @@ def test_real_metadata_json_loads() -> None:
 
 def test_real_metadata_has_all_gap_types() -> None:
     """
-    The actual metadata.json must have entries with all four status types
+    The actual metadata.json must have entries covering the gap status types
     (when mapped against synthetic detection results matching the declared fields).
     """
     mapper = MetadataMapper(METADATA_PATH)
@@ -478,12 +478,16 @@ def test_real_metadata_has_all_gap_types() -> None:
         _make_result("CSV", "customers.csv", "full_name","Identity"),
         # Purpose missing (customers.csv state)
         _make_result("CSV", "customers.csv", "state",   "Location"),
-        # Not mapped (customers.csv country — no metadata entry)
+        # Both purpose and retention missing (customers.csv country)
         _make_result("CSV", "customers.csv", "country", "Location"),
+        # Not mapped (customers.csv registration_date — no metadata entry)
+        _make_result("CSV", "customers.csv", "registration_date", "Identity"),
     ]
 
     statuses = {mapper.map_field(r).overall_status for r in test_results}
-    assert MetadataStatus.COMPLETE          in statuses
-    assert MetadataStatus.RETENTION_MISSING in statuses
-    assert MetadataStatus.PURPOSE_MISSING   in statuses
-    assert MetadataStatus.NOT_MAPPED        in statuses
+    assert MetadataStatus.COMPLETE              in statuses
+    assert MetadataStatus.RETENTION_MISSING     in statuses
+    assert MetadataStatus.PURPOSE_MISSING       in statuses
+    assert MetadataStatus.BOTH_MISSING          in statuses
+    assert MetadataStatus.NOT_MAPPED            in statuses
+
