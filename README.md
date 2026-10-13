@@ -385,9 +385,91 @@ python backend/metadata/run_metadata_mapping.py
 
 ---
 
+## Ground-Truth Evaluation & Performance Metrics (Phase 5)
+
+> **Scope Limitation**  
+> Evaluation metrics are calculated against hand-labelled synthetic benchmark datasets. They provide technical evidence of detector behavior, not legal certification, GDPR/DPDP compliance audits, or universal real-world performance guarantees.
+
+Phase 5 introduces a reproducible, explainable evaluation framework that verifies scanner predictions against `data/ground_truth.csv`.
+
+### Architecture & Matching Strategy
+
+```
+Scanner Engine Output (84 fields) ──┐
+                                     ├──→ Composite Key Matching ──→ Evaluator Engine ──→ Reports (CSV / JSON)
+Ground Truth CSV (84 labels)     ──┘    (source_type, source_name, field_name)
+```
+
+1. **Composite Key Matching**:
+   Records are paired strictly on `(source_type, source_name, field_name)`. Sources are completely isolated so that identical column names across multiple tables/files are never conflated.
+2. **Whitespace and Casing Normalization**:
+   Only harmless formatting differences (e.g., source type casing `csv` vs `CSV`) are normalized. No unmatched records are silently ignored.
+3. **No Ground-Truth Leakage**:
+   Ground-truth labels are never fed into the scanner engine or detection logic.
+
+### Candidate Detection vs Class Classification
+
+The evaluation clearly separates two distinct types of detector outcomes:
+
+1. **Binary Candidate Detection** (Personal Data vs Non-Personal Data):
+   - **True Positive (TP)**: Field is labelled as personal data and detected as a candidate by scanner.
+   - **False Positive (FP)**: Field is non-personal data, but scanner detected it as a personal-data candidate.
+   - **False Negative (FN)**: Field is labelled as personal data, but scanner failed to detect it.
+   - **True Negative (TN)**: Field is non-personal data and scanner correctly left it unflagged.
+
+2. **Per-Class Classification** (One-vs-Rest for each of the 5 classes):
+   - **True Positive (TP)**: Ground-truth class equals $C$ and predicted class equals $C$.
+   - **False Positive (FP)**: Scanner predicted class $C$, but ground truth is not $C$.
+   - **False Negative (FN)**: Ground truth is class $C$, but scanner predicted something else (or nothing).
+   - If a field is predicted as the wrong class, it is correctly accounted for as a **False Negative** for its expected class and a **False Positive** for the predicted class.
+
+### Metrics Definitions & Zero Handling
+
+$$\text{Precision} = \frac{\text{TP}}{\text{TP} + \text{FP}}$$
+$$\text{Recall} = \frac{\text{TP}}{\text{TP} + \text{FN}}$$
+$$\text{F1-Score} = \frac{2 \times \text{Precision} \times \text{Recall}}{\text{Precision} + \text{Recall}}$$
+
+- **Zero Denominator Handling**: When $(\text{TP} + \text{FP}) = 0$ or $(\text{TP} + \text{FN}) = 0$, the metric is explicitly recorded as `None` (undefined) with an informative status label (`Zero Predictions` or `Zero Ground-Truth Positives`).
+- **Unlabelled Fields**: Missing labels are never treated as negative examples.
+
+### Benchmark Evaluation Results
+
+On the 84-field synthetic benchmark dataset:
+- **Binary Candidate Detection**:
+  - TP: 40, FP: 10, FN: 0, TN: 34
+  - Precision: **80.0%**, Recall: **100.0%**, F1-Score: **0.889**
+- **Per-Class Metrics**:
+  - `Identity`: Precision = 0.429, Recall = 1.000, F1 = 0.600 (Support: 6)
+  - `Contact`: Precision = 1.000, Recall = 1.000, F1 = 1.000 (Support: 10)
+  - `Location`: Precision = 1.000, Recall = 1.000, F1 = 1.000 (Support: 14)
+  - `Financial`: Precision = 0.800, Recall = 1.000, F1 = 0.889 (Support: 8)
+  - `Sensitive/Health`: Precision = 1.000, Recall = 1.000, F1 = 1.000 (Support: 2 — Limited Sample)
+
+### Dataset Limitations & Sample Size Notice
+
+- **Class Imbalance**: `Sensitive/Health` contains only 2 positive benchmark examples in the demo database. Its 100% metrics reflect prototype accuracy on known test schema, not generalized statistical performance.
+- **False Positive Causes**: Dates (`registration_date`, `hire_date`, `transaction_date`) match ISO date regex patterns and are currently flagged as candidate `Identity` fields with low/medium confidence, requiring human review.
+
+### Running the Evaluation CLI
+
+Run the full evaluation pipeline via PowerShell:
+```powershell
+$env:PYTHONIOENCODING="utf-8"
+.venv\Scripts\python backend\evaluation\run_evaluation.py
+```
+
+### Generated Reports
+- `reports/evaluation_summary.json`: Complete dataset counts, per-class metrics, warnings, and limitations.
+- `reports/evaluation_per_class.csv`: Tabular TP, FP, FN, support, precision, recall, and F1 per class.
+- `reports/evaluation_confusion_matrix.csv`: Full ground-truth vs predicted confusion matrix with explicit `Not Detected` column.
+- `reports/evaluation_errors.csv`: Detailed mismatch logs with source keys, error categories, and detection reasoning.
+
+---
+
 ## Disclaimer
 
 > This prototype is developed for a **hackathon demonstration** using **entirely synthetic data**.  
 > It provides a **technical evidence inventory** to assist human privacy reviewers.  
 > It does **not** constitute legal advice, determine regulatory compliance, or replace a formal Data Protection Impact Assessment (DPIA).
+
 
