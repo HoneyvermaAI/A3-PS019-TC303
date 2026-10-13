@@ -1,0 +1,176 @@
+{
+  "version": "1.0",
+  "description": "Configurable personal-data detection rules for PS-019 TC-303. Add or remove keywords and patterns here to tune the scanner without modifying Python source code.",
+
+  "scoring": {
+    "_comment": "Additive scores per evidence source. Final confidence = min(1.0, sum of applicable scores).",
+    "keyword_exact":      0.70,
+    "keyword_token":      0.60,
+    "keyword_substring":  0.30,
+    "pattern_high":       0.30,
+    "pattern_medium":     0.18,
+    "pattern_low":        0.08,
+    "pattern_minimal":    0.02,
+    "dtype_hint":         0.05
+  },
+
+  "thresholds": {
+    "high":                0.75,
+    "medium":              0.45,
+    "low":                 0.20,
+    "review_required_max": 0.74
+  },
+
+  "sample_size": 100,
+
+  "classes": {
+
+    "Identity": {
+      "description": "Fields that directly identify a natural person: names, dates of birth, government identifiers, biographic attributes.",
+      "keywords": [
+        "name", "full_name", "fullname", "first_name", "firstname",
+        "last_name", "lastname", "surname", "forename", "given_name",
+        "middle_name", "dob", "date_of_birth", "birth_date", "birthdate",
+        "birthday", "age", "national_id", "nationalid", "national_number",
+        "ssn", "social_security", "nin", "taxpayer_id",
+        "passport", "passport_number", "driver_license",
+        "gender", "sex", "marital_status", "nationality", "ethnicity"
+      ],
+      "patterns": [
+        {
+          "name": "iso_date",
+          "regex": "^\\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])$",
+          "description": "ISO 8601 calendar date (YYYY-MM-DD). Supports date_of_birth detection."
+        }
+      ],
+      "dtype_hints": ["object", "datetime64[ns]", "datetime64"]
+    },
+
+    "Contact": {
+      "description": "Fields used to reach or communicate with a person: email addresses, phone numbers, physical addresses.",
+      "keywords": [
+        "email", "e_mail", "email_address", "billing_email",
+        "phone", "phone_number", "mobile", "mobile_number", "cell",
+        "telephone", "tel", "fax", "contact_number",
+        "address", "street", "street_address", "address_line",
+        "suburb", "unit_number", "po_box"
+      ],
+      "patterns": [
+        {
+          "name": "email",
+          "regex": "^[a-zA-Z0-9._%+\\-]+@[a-zA-Z0-9.\\-]+\\.[a-zA-Z]{2,}$",
+          "description": "Standard RFC-5321-style email address."
+        },
+        {
+          "name": "phone_international",
+          "regex": "^\\+\\d{1,3}[\\-\\s]\\d{1,4}[\\-\\s]\\d{2,4}[\\-\\s]\\d{2,9}$",
+          "description": "International phone number with country code, e.g. +1-555-123-4567."
+        },
+        {
+          "name": "phone_local",
+          "regex": "^\\(?\\d{3}\\)?[\\s\\-\\.]\\d{3}[\\s\\-\\.]\\d{4}$",
+          "description": "North-American local phone format, e.g. (555) 123-4567."
+        }
+      ],
+      "dtype_hints": ["object"]
+    },
+
+    "Location": {
+      "description": "Fields describing the geographic whereabouts of a person or transaction: cities, countries, postcodes, coordinates.",
+      "keywords": [
+        "city", "billing_city", "town", "village",
+        "state", "province", "region", "territory", "county", "district",
+        "country", "billing_country", "nation",
+        "postal_code", "postal", "postcode", "zip", "zip_code", "zipcode",
+        "latitude", "longitude", "lat", "lon", "lng", "geo", "location",
+        "coordinates", "gps"
+      ],
+      "patterns": [
+        {
+          "name": "us_zip_code",
+          "regex": "^\\d{5}(-\\d{4})?$",
+          "description": "US ZIP code (5-digit or ZIP+4)."
+        },
+        {
+          "name": "uk_postcode",
+          "regex": "^[A-Z]{1,2}\\d[A-Z\\d]?\\s?\\d[A-Z]{2}$",
+          "description": "UK postcode format."
+        },
+        {
+          "name": "decimal_coordinate",
+          "regex": "^-?\\d{1,3}\\.\\d{3,}$",
+          "description": "Decimal-degree latitude or longitude."
+        }
+      ],
+      "dtype_hints": ["object", "float64"]
+    },
+
+    "Financial": {
+      "description": "Fields containing financial information: salaries, bank accounts, payment card data, transaction amounts.",
+      "keywords": [
+        "salary", "income", "wage", "compensation", "earnings",
+        "bank_account", "account_number", "iban", "bic", "sort_code",
+        "credit_card", "debit_card", "card_number", "card_last4",
+        "billing_amount", "transaction_amount",
+        "amount", "balance",
+        "tax_id", "vat_number",
+        "revenue", "fee", "fine"
+      ],
+      "patterns": [
+        {
+          "name": "iban",
+          "regex": "^[A-Z]{2}\\d{2}[A-Z0-9]{4}\\d{7}([A-Z0-9]?){0,16}$",
+          "description": "International Bank Account Number."
+        },
+        {
+          "name": "account_number_synthetic",
+          "regex": "^ACC-\\d{6,12}$",
+          "description": "Synthetic account number pattern used in demo data (ACC-XXXXXXXX)."
+        },
+        {
+          "name": "card_last4",
+          "regex": "^\\d{4}$",
+          "description": "Last four digits of a payment card."
+        },
+        {
+          "name": "currency_amount",
+          "regex": "^(\\$\\d{1,12}(\\.\\d{1,2})?|\\d{1,12}\\.\\d{1,2})$",
+          "description": "Monetary amount — must have a $ prefix OR a decimal separator. Bare integers alone do not match, preventing false positives on counters and IDs."
+        }
+      ],
+      "dtype_hints": ["float64", "int64", "object"]
+    },
+
+    "Sensitive/Health": {
+      "description": "Special-category personal data: health conditions, medical identifiers, religion, biometrics, disability status.",
+      "keywords": [
+        "health", "health_insurance_id", "health_insurance",
+        "medical", "medical_record", "medical_id",
+        "diagnosis", "condition", "symptom", "prescription",
+        "medication", "allergy", "chronic", "mental",
+        "blood_type", "blood_group",
+        "disability", "disability_status",
+        "biometric", "fingerprint", "retina",
+        "religion", "religious",
+        "ethnicity", "ethnic", "race",
+        "political", "political_opinion",
+        "patient", "patient_id", "clinical",
+        "insurance"
+      ],
+      "patterns": [
+        {
+          "name": "health_insurance_synthetic",
+          "regex": "^HI-\\d{6,}$",
+          "description": "Synthetic health-insurance ID format used in demo data (HI-XXXXXXX)."
+        },
+        {
+          "name": "blood_type",
+          "regex": "^(A|B|AB|O)[\\+\\-]$",
+          "description": "ABO blood group with Rh factor."
+        }
+      ],
+      "dtype_hints": ["object"]
+    }
+
+  }
+}

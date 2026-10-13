@@ -1,0 +1,135 @@
+# ──────────────────────────────────────────────
+# Python
+# ──────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.pyd
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+pytest_cache/
+
+# ──────────────────────────────────────────────
+# Virtual Environments
+# ──────────────────────────────────────────────
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+.python-version
+
+# ──────────────────────────────────────────────
+# FastAPI / Uvicorn
+# ──────────────────────────────────────────────
+*.log
+uvicorn.log
+
+# ──────────────────────────────────────────────
+# SQLite Databases (generated demo data)
+# ──────────────────────────────────────────────
+*.db
+*.sqlite
+*.sqlite3
+
+# ──────────────────────────────────────────────
+# Generated Reports & Outputs
+# ──────────────────────────────────────────────
+reports/*.json
+reports/*.csv
+reports/*.html
+reports/*.pdf
+
+# ──────────────────────────────────────────────
+# IDE & Editor Files
+# ──────────────────────────────────────────────
+# VSCode
+.vscode/
+*.code-workspace
+
+# PyCharm / IntelliJ
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# Vim / Neovim
+*.swp
+*.swo
+*~
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# ──────────────────────────────────────────────
+# Jupyter Notebooks (cache)
+# ──────────────────────────────────────────────
+.ipynb_checkpoints/
+
+# ──────────────────────────────────────────────
+# Mypy / Type Checkers
+# ──────────────────────────────────────────────
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.pyre/
+.pytype/
+
+# ──────────────────────────────────────────────
+# Environment / Secrets
+# ──────────────────────────────────────────────
+.env.local
+.env.*.local
+secrets.yaml
+secrets.json

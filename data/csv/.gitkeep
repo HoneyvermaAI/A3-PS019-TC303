@@ -1,0 +1,3 @@
+# data/csv/.gitkeep
+# Synthetic CSV data files will be placed in this directory.
+# Generated data files are excluded from version control.

@@ -1,0 +1,4 @@
+# reports/.gitkeep
+# This directory stores generated scan reports (JSON/CSV).
+# Report files are excluded from version control via .gitignore.
+# This file keeps the directory tracked by Git.

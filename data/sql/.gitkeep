@@ -1,0 +1,3 @@
+# data/sql/.gitkeep
+# Synthetic SQLite database files will be placed in this directory.
+# .db / .sqlite files are excluded from version control via .gitignore.
